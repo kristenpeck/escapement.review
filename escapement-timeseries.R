@@ -42,6 +42,14 @@ SILs.babine.SK <- babine.streams %>%
 
 #write.csv(SILs.babine.SK,"SILs.babine.SK.csv")
 
+#plot cookies for David:
+# paste0()
+# substr()
+# which()
+# yday(ymd("2025-01-27"))
+# yday(dmy("27-01-2025"))
+
+
 #make table of SILs by stream and year
 sil.summary.by.yr <- SILs.babine.SK %>% 
   group_by(Inspection.Year, StreamName) %>% 
@@ -51,6 +59,8 @@ sil.summary.by.yr <- SILs.babine.SK %>%
   arrange(StreamName) %>% 
   pivot_wider(names_from = Inspection.Year,
               values_from = silx)
+
+
 
 #write.csv(sil.summary.by.yr,"sil.summary.by.yr.csv")
 
