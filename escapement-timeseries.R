@@ -1,6 +1,8 @@
 
 #This script is to support review and summary of BC16 data
-#Part of it is the functions defined in auc_function4.R
+
+
+#Analysis parts of it are the functions defined in auc_function4.R
 #Another part of it was designed for figures used in PSR 2024
 #
 
@@ -13,9 +15,8 @@ library(lubridate)
 library(sf)
 library(ggplot2)
 
-#### Babine Watershed escapement data review ####
 
-#create table of Babine streams and SIL/SEN presence
+# Applicable to all stream reviews ####
 # These three spreadsheets are unaltered exports from Stream Esc_DB_MasterDataset.accdb
 #found in S:\Stock Assessment\ESCAPEMENT\Databases on Dec 18th
 
@@ -27,66 +28,58 @@ SENs.raw <- read_excel("MastertblSEN2004-2022.xlsx",
 
 streams <- read_excel("Streams.xlsx")
 
+# # # # # # # # # # # # # # # # # # # # # # # # # 
 
-babine.streams <- streams %>% 
+#### Watershed review selection - CHANGE THESE TO MATCH YOUR REVIEW ####
+
+review.subject <- "babineSK2010-2022"
+
+# filter for years of interest:
+years.filter <- c(2010:2022) #those years after the last large babine review
+unique(years.filter)
+
+# filter for streams of interest using grouping identifiers 
+
+#babine watershed
+review.streams <- streams %>% 
   mutate(wscd.short = substr(WATERSHED_Code,1,3)) %>% 
-  filter(wscd.short %in% "480") %>% # select those streams and lakes within the Babine watershed
+  filter(wscd.short %in% "480") %>% # select those streams and lakes within the Babine watershed (480)
   select(StreamId, StreamName,WATERSHED_Code, Active)
 
-years.filter <- c(2010:2022) #those years after the last large review
+exp.streams <- review.streams %>% 
+  mutate(QA.SegmentStartLatDD = "",QA.SegmentStartLongDD="",
+         QA.SegmentStopLatDD = "", QA.SegmentStopLongDD="",
+         QA.SegmentComments = "")
 
-SILs.babine.SK <- babine.streams %>% 
-  left_join(SILs.raw, by=c("StreamId"="StreamID"), ) %>% 
+write_csv(exp.streams, paste0("Streams.toreview-",review.subject,".csv"))
+#after happy with this export, re-save as excel and colour new columns to be filled in
+
+
+# # # # # # # # # # # # # # # # # # # # 
+
+
+
+#the rest of this script should be universal for sockeye, but need to change sp:
+
+# filter SILs by above selections - *change species if not sockeye*
+
+SILs.to.review <- review.streams %>% 
+  left_join(SILs.raw, by=c("StreamId"="StreamID")) %>% 
   filter(Inspection.Year %in% years.filter,
-         TargetSockeye %in% T)
+         TargetSockeye %in% T) %>%  #only include SILs where sockeye were targeted
+  mutate(julian.day = yday(SilDate),obs.eff = as.numeric(""), QA.comments = "", surveyed.full.extent = "",
+         proportion.surveyed=as.numeric(""), barriers.present = "")
 
-#write.csv(SILs.babine.SK,"SILs.babine.SK.csv")
-
-#plot cookies for David:
-# paste0()
-# substr()
-# which()
-# yday(ymd("2025-01-27"))
-# yday(dmy("27-01-2025"))
+write.csv(SILs.to.review, paste0("SILs.toreview-",review.subject,".csv"))
+#after happy with this export, re-save as excel and colour new columns to be filled in
 
 
-#make table of SILs by stream and year
-sil.summary.by.yr <- SILs.babine.SK %>% 
-  group_by(Inspection.Year, StreamName) %>% 
-  summarise(sil = length(unique(StreamName))) %>% 
-  mutate(silx = ifelse(sil %in% 1,"X",NA)) %>% 
-  select(-sil) %>% 
-  arrange(StreamName) %>% 
-  pivot_wider(names_from = Inspection.Year,
-              values_from = silx)
+# filter SENs of interest by above selections - *change species if not looking for sockeye* 
 
-
-
-#write.csv(sil.summary.by.yr,"sil.summary.by.yr.csv")
-
-
-
-SENs.babine.SK <- babine.streams %>% 
+SENs.review <- review.streams %>% 
   left_join(SENs.raw, by=c("StreamId"="StreamID")) %>% 
   filter(Year %in% years.filter,
-         SockAnnualEst != "N/I") #exclude only those with "N/I"
-
-#make table of SENs by stream and year
-sen.summary.by.yr <- SENs.babine.SK %>% 
-  group_by(Year, StreamName) %>% 
-  summarise(sen = length(unique(StreamName))) %>% 
-  mutate(senx = ifelse(sen %in% 1,"X",NA)) %>% 
-  select(-sen) %>% 
-  arrange(StreamName) %>%
-  pivot_wider(names_from = Year,
-              values_from = senx)
-
-#write.csv(sen.summary.by.yr,"sen.summary.by.yr.csv")
-
-
-#Make template of AUC_residencetime.xlsx with Babine SENs:
-
-AUC.restime.bab <- SENs.babine.SK %>% 
+         SockAnnualEst != "N/I") %>%  #exclude only those with "N/I" (not inspected)
   select(StreamName,Year,SockNoStreamInsp,
          SockEstMeth.num = SockEstMeth,
          SockEstClassification.num=SockEstClassification,
@@ -99,9 +92,9 @@ AUC.restime.bab <- SENs.babine.SK %>%
                               `5` = "expert.opinion",`6` = "redd.count",
                               `8`= "mark.recap", `12`= "other")) %>% 
   mutate(SockEstClassification = recode(SockEstClassification.num, `1` = "census",
-                            `2` = "MR.or.breachedfence",`3` = "hi.res.stream.survey", 
-                            `4` = "med.res.stream.survey",
-                            `5` = "low.res.stream.survey",`6` = "AP.NO.NI.DNS")) %>% 
+                                        `2` = "MR.or.breachedfence",`3` = "hi.res.stream.survey", 
+                                        `4` = "med.res.stream.survey",
+                                        `5` = "low.res.stream.survey",`6` = "AP.NO.NI.DNS")) %>% 
   mutate(QA.SockNoStreamInsp = NA, residence.time1 = NA, res.time.source1 = NA, 
          residence.time2 = NA, res.time.source2 = NA,
          holders.or.spawners = NA, QA.comments = NA,
@@ -116,39 +109,131 @@ AUC.restime.bab <- SENs.babine.SK %>%
          AnnualEstRationale, UnusualFishCond,
          UnusualStreamCondit, GenComments,SockEntStreamEst)
 
-write_csv(AUC.restime.bab, "AUC.restime.bab.csv", na = "")
+
+write_csv(SENs.review, paste0("AUC.res.time.review-",review.subject,".csv"), na = "")
+#after happy with this export, re-save as excel and colour new columns to be filled in
 
 
 
-####  spatial points files of stream segments ####
+
+
+# Reference figures and tables ####
+
+
+### Presence of SIL/SENs by yr ####
+#make overview table of SILs present by stream and year
+
+sil.summary.by.yr <- SILs.to.review %>% 
+  group_by(Inspection.Year, StreamName) %>% 
+  summarise(sil = length(unique(StreamName))) %>% 
+  mutate(silx = ifelse(sil %in% 1,"X",NA)) %>% 
+  select(-sil) %>% 
+  arrange(StreamName) %>% 
+  pivot_wider(names_from = Inspection.Year,
+              values_from = silx)
+
+write.csv(sil.summary.by.yr,paste0("SIL.presencebyyr-",review.subject,".csv")) 
+
+
+#make table of SENs present by stream and year
+sen.summary.by.yr <- SENs.review %>% 
+  group_by(Year, StreamName) %>% 
+  summarise(sen = length(unique(StreamName))) %>% 
+  mutate(senx = ifelse(sen %in% 1,"X",NA)) %>% 
+  select(-sen) %>% 
+  arrange(StreamName) %>%
+  pivot_wider(names_from = Year,
+              values_from = senx)
+
+write.csv(sen.summary.by.yr,paste0("SEN.presencebyyr-",review.subject,".csv"))
+
+
+#### Timing of peak spawn versus all targeted surveys ####
+
+
+# stream inspection timing plots, modified from David's script#
+# go see David's script if you want to go one-by-one
+
+stream.ids <- unique(SILs.to.review$StreamId)
+
+#remove streams where SK never recorded, even as a 0, though they were targeted:
+#these should probably be corrected in database, either to change to 0 seen or remove as target species:
+(bogus.targets <- SILs.to.review %>% 
+  group_by(StreamId, StreamName) %>% 
+  summarize(max.Sock_AL_Spawning = max(Sock_AL_Spawning,na.rm=T)) %>% 
+  filter(is.na(max.Sock_AL_Spawning)|is.infinite(max.Sock_AL_Spawning)))
+
+stream.ids <- setdiff(stream.ids,bogus.targets$StreamId)
+
+#note that if you run this, this is going to save individual 
+# timing plots for each stream into a timing.plots folder.
+# If you don't want to do this, then comment out and skip.
+
+for(i in stream.ids){
+  tmp.spawn <- SILs.to.review %>% 
+    filter(StreamId %in% i, !is.na(Sock_AL_Spawning)) %>% 
+    mutate(julian = yday(ymd(SilDate)), 
+           appr.date = as_date(julian,origin="2025-01-01")) %>% 
+    group_by(Inspection.Year, StreamId, StreamName) %>% 
+    summarize(start = min(julian), end = max(julian))
+  
+  peak.spawn <- SILs.to.review %>% 
+    filter(StreamId %in% i) %>% 
+    mutate(julian = yday(ymd(SilDate)),
+           appr.date = as_date(julian,origin="2025-01-01")) %>% 
+    group_by(Inspection.Year, StreamId, StreamName) %>% 
+    summarize(peak.spawner = max(Sock_AL_Spawning, na.rm=T),
+              peak.day = ifelse(Sock_AL_Spawning == peak.spawner, julian, NA)) %>% 
+    filter(!is.na(peak.day)) #ugly code, just ignore warning for now
+  
+  plot.peak.spawn <- ggplot() +
+    geom_ribbon(data = tmp.spawn, 
+                aes(x=Inspection.Year, ymin = start,ymax=end), fill="grey75")+
+    geom_point(data = peak.spawn, aes(x=Inspection.Year,y=peak.day))+
+    geom_line(data = peak.spawn, aes(x=Inspection.Year,y=peak.day))+
+    scale_x_continuous(breaks = seq(min(peak.spawn$Inspection.Year),
+                                    max(peak.spawn$Inspection.Year),1))+
+    labs(title = tmp.spawn$StreamName)
+  plot.peak.spawn
+  
+  ggsave(plot = plot.peak.spawn, path = "./timing.plots/",
+         filename = paste0(unique(tmp.spawn$StreamName),"-timing.png"),
+         width = 6, height=4)
+
+}
+
+
+
+
+####  Spatial points files of start and end of stream surveys ####
 
 #UTM coords:
-SILs.babine.SK.mappingUTMs <- SILs.babine.SK %>% 
+SILs.review.mappingUTMs <- SILs.to.review %>% 
   select(StreamId, StreamName, Inspection.Year, Affiliation,
          StartBoundary, StopBoundary, StartUtmN,StartUtmE,                           
          StartUtmZone, StopUtmN, StopUtmE, StopUtmZone)
 
-SILs.babine.SK.zone9start <- SILs.babine.SK.mappingUTMs %>% 
+SILs.zone9start <- SILs.review.mappingUTMs %>% 
   filter(!is.na(StartUtmN), StartUtmZone %in% 9) %>% 
   select(-c(StopUtmN, StopUtmE, StopUtmZone, StartUtmZone))
 
-SILs.babine.SK.zone9stop <- SILs.babine.SK.mappingUTMs %>% 
+SILs.zone9stop <- SILs.review.mappingUTMs %>% 
   filter(!is.na(StopUtmN), StartUtmZone %in% 9) %>% 
   select(-c(StartUtmN,StartUtmE,StartUtmZone, StopUtmZone))
 
-SILs.babine.SK.zone10start <- SILs.babine.SK.mappingUTMs %>% 
+SILs.zone10start <- SILs.review.mappingUTMs %>% 
   filter(!is.na(StartUtmN), StartUtmZone %in% 10) %>% 
   select(-c(StopUtmN, StopUtmE, StopUtmZone, StartUtmZone))
 
-SILs.babine.SK.zone10stop <- SILs.babine.SK.mappingUTMs %>% 
+SILs.zone10stop <- SILs.review.mappingUTMs %>% 
   filter(!is.na(StopUtmN), StartUtmZone %in% 10) %>% 
   select(-c(StartUtmN,StartUtmE,StartUtmZone, StopUtmZone))
 
-start.zone9 <- st_as_sf(SILs.babine.SK.zone9start, coords = c("StartUtmN","StartUtmE"), crs = 26909)
-stop.zone9 <- st_as_sf(SILs.babine.SK.zone9stop, coords = c("StopUtmN","StopUtmE"), crs = 26909)
+start.zone9 <- st_as_sf(SILs.zone9start, coords = c("StartUtmE","StartUtmN"), crs = 26909)
+stop.zone9 <- st_as_sf(SILs.zone9stop, coords = c("StopUtmE","StopUtmN"), crs = 26909)
 
-start.zone10 <- st_as_sf(SILs.babine.SK.zone10start, coords = c("StartUtmN","StartUtmE"), crs = 26910)
-stop.zone10 <- st_as_sf(SILs.babine.SK.zone10stop,coords = c("StopUtmN","StopUtmE"), crs = 26910)
+start.zone10 <- st_as_sf(SILs.zone10start, coords = c("StartUtmE","StartUtmN"), crs = 26910)
+stop.zone10 <- st_as_sf(SILs.zone10stop,coords = c("StopUtmE","StopUtmN"), crs = 26910)
 
 zone9 <- rbind(start.zone9,stop.zone9 ) %>% 
   st_transform(crs = 4326) #convert to decimal degrees
@@ -157,12 +242,14 @@ zone10 <- rbind(start.zone10,stop.zone10 )%>%
 
 all.zones <- rbind(zone9, zone10)
 
-st_write(all.zones, dsn = "start.stopUTMs.kml", driver = "kml") #export to google earth kml
+st_write(all.zones, 
+         dsn = paste0("start.stopUTMs-",review.subject,".kml"), 
+         driver = "kml") #export to google earth kml
 
 
 #ddmmss files:
 
-SILs.babine.SK.mapping.ddmmss <- SILs.babine.SK %>% 
+SILs.mapping.ddmmss <- SILs.to.review %>% 
   select(StreamId, StreamName, Inspection.Year, Affiliation,
          StartBoundary, StopBoundary, StartLatDeg,StartLatMin,                         
          StartLatSec,StartLongDeg,StartLongMin,StartLongSec,                        
@@ -177,7 +264,7 @@ SILs.babine.SK.mapping.ddmmss <- SILs.babine.SK %>%
          StopLongMin = ifelse(is.na(StopLongMin),0,StopLongMin),
          StopLongSec= ifelse(is.na(StopLongSec),0,StopLongSec))
 
-SILs.babine.SK.ddmmssstart <- SILs.babine.SK.mapping.ddmmss %>% 
+SILs.ddmmssstart <- SILs.mapping.ddmmss %>% 
   filter(!is.na(StartLatDeg)) %>% 
   mutate(lat = StartLatDeg+StartLatMin/60+StartLatSec/3600,
          long = -1*(StartLongDeg+StartLongMin/60+StartLongSec/3600)) %>% 
@@ -186,7 +273,7 @@ SILs.babine.SK.ddmmssstart <- SILs.babine.SK.mapping.ddmmss %>%
             StartLatSec,StartLongDeg,StartLongMin,StartLongSec)) %>% 
   filter(!is.na(lat), !is.na(long))
 
-SILs.babine.SK.ddmmssstop <- SILs.babine.SK.mapping.ddmmss %>% 
+SILs.ddmmssstop <- SILs.mapping.ddmmss %>% 
   filter(!is.na(StopLatDeg)) %>% 
   mutate(lat = StopLatDeg+StopLatMin/60+StopLatSec/3600,
          long = -1*(StopLongDeg+StopLongMin/60+StopLongSec/3600)) %>% 
@@ -195,12 +282,14 @@ SILs.babine.SK.ddmmssstop <- SILs.babine.SK.mapping.ddmmss %>%
             StopLatSec,StopLongDeg,StopLongMin,StopLongSec)) %>% 
   filter(!is.na(lat), !is.na(long))
 
-start.dd <- st_as_sf(SILs.babine.SK.ddmmssstart, coords = c("long","lat"), crs = 4326)
-stop.dd <- st_as_sf(SILs.babine.SK.ddmmssstop, coords = c("long","lat"), crs = 4326)
+start.dd <- st_as_sf(SILs.ddmmssstart, coords = c("long","lat"), crs = 4326)
+stop.dd <- st_as_sf(SILs.ddmmssstop, coords = c("long","lat"), crs = 4326)
 
 all.dd <- rbind(start.dd, stop.dd)
 
-st_write(all.dd, dsn = "start.stopDDs.kml", driver = "kml") #export to google earth kml
+st_write(all.dd, 
+         dsn = paste0("start.stopDDs-",review.subject,".kml"), 
+         driver = "kml") #export to google earth kml
 
 
 
