@@ -1,6 +1,6 @@
 
-#This script is to support review and summary of BC16 data
-
+#This script is to support review and summary of visual stream estimate data
+# in the north coast
 
 #Analysis parts of it are the functions defined in auc_function4.R
 #Another part of it was designed for figures used in PSR 2024
@@ -14,9 +14,9 @@ library(tidyverse)
 library(lubridate)
 library(sf)
 library(ggplot2)
+library(gridExtra)
 
-
-# Applicable to all stream reviews ####
+# Load the most recent database data ####
 # These three spreadsheets are unaltered exports from Stream Esc_DB_MasterDataset.accdb
 #found in S:\Stock Assessment\ESCAPEMENT\Databases on Dec 18th
 
@@ -29,6 +29,7 @@ SENs.raw <- read_excel("MastertblSEN2004-2022.xlsx",
 streams <- read_excel("Streams.xlsx")
 
 # # # # # # # # # # # # # # # # # # # # # # # # # 
+
 
 #### Watershed review selection - CHANGE THESE TO MATCH YOUR REVIEW ####
 
@@ -51,41 +52,45 @@ exp.streams <- review.streams %>%
          QA.SegmentStopLatDD = "", QA.SegmentStopLongDD="",
          QA.SegmentComments = "")
 
-write_csv(exp.streams, paste0("Streams.toreview-",review.subject,".csv"))
-#after happy with this export, re-save as excel and colour new columns to be filled in
-
-
-
-
-# Morice and Nanika version:
-
-review.subject <- "morice-nanikaCH2004-2022"
-
-# filter for years of interest:
-years.filter <- c(2004:2022) #all available recent yrs
-unique(years.filter)
-
-# filter for streams of interest using grouping identifiers 
-
-#wedzinkwa watershed, 460
-review.streams <- streams %>% 
-  mutate(wscd.short = substr(WATERSHED_Code,1,3)) %>% 
-  filter(wscd.short %in% "460") %>% # select those streams and lakes within the Morice watershed (460)
-  select(StreamId, StreamName,WATERSHED_Code, Active)
-
-exp.streams <- review.streams %>% 
-  mutate(QA.SegmentStartLatDD = "",QA.SegmentStartLongDD="",
-         QA.SegmentStopLatDD = "", QA.SegmentStopLongDD="",
-         QA.SegmentComments = "")
-
 #write_csv(exp.streams, paste0("Streams.toreview-",review.subject,".csv"))
 #after happy with this export, re-save as excel and colour new columns to be filled in
 
-# # # # # # # # # # # # # # # # # # # # 
 
 
 
-#SOCKEYE version:
+# # Morice and Nanika version:
+# 
+# review.subject <- "morice-nanikaCH2004-2022"
+# 
+# # filter for years of interest:
+# years.filter <- c(2004:2022) #all available recent yrs
+# unique(years.filter)
+# 
+# # filter for streams of interest using grouping identifiers 
+# 
+# #wedzinkwa watershed, 460
+# review.streams <- streams %>% 
+#   mutate(wscd.short = substr(WATERSHED_Code,1,3)) %>% 
+#   filter(wscd.short %in% "460") %>% # select those streams and lakes within the Morice watershed (460)
+#   select(StreamId, StreamName,WATERSHED_Code, Active)
+# 
+# # review.streams <- streams %>% 
+# #   filter(StreamId %in% c(427, 428)) %>% # select those streams and lakes within the Morice watershed (460)
+# #   select(StreamId, StreamName,WATERSHED_Code, Active)
+# 
+# exp.streams <- review.streams %>% 
+#   mutate(QA.SegmentStartLatDD = "",QA.SegmentStartLongDD="",
+#          QA.SegmentStopLatDD = "", QA.SegmentStopLongDD="",
+#          QA.SegmentComments = "")
+# 
+# #write_csv(exp.streams, paste0("Streams.toreview-",review.subject,".csv"))
+# #after happy with this export, re-save as excel and colour new columns to be filled in
+# 
+# # # # # # # # # # # # # # # # # # # # # 
+
+
+
+#### SOCKEYE version: ####
 
 # filter SILs by above selections - *change species if not sockeye*
 
@@ -96,7 +101,7 @@ SILs.to.review <- review.streams %>%
   mutate(julian.day = yday(SilDate),obs.eff = as.numeric(""), QA.comments = "", surveyed.full.extent = "",
          proportion.surveyed=as.numeric(""), barriers.present = "")
 
-write_csv(SILs.to.review, paste0("SILs.toreview-",review.subject,".csv"))
+#write_csv(SILs.to.review, paste0("SILs.toreview-",review.subject,".csv"))
 #after happy with this export, re-save as excel and colour new columns to be filled in
 
 
@@ -127,17 +132,18 @@ SENs.review <- review.streams %>%
          QA.SockEstMeth.num = NA,
          QA.SockEstClassification.num = NA,
          QA.SockAnnualEst = NA,
-         QA.SockEntStreamEst) %>% 
+         QA.SockEntStreamEst = NA) %>% 
   select(StreamName,Year,SockNoStreamInsp,QA.SockNoStreamInsp,SockEstMeth.num,
          SockEstMeth,QA.SockEstMeth.num,
          SockEstClassification.num, SockEstClassification,QA.SockEstClassification.num,
          SockAnnualEst,QA.SockAnnualEst,residence.time1,res.time.source1,
          residence.time2,res.time.source2, holders.or.spawners, QA.comments,
          AnnualEstRationale, UnusualFishCond,
-         UnusualStreamCondit, GenComments,SockEntStreamEst,QA.SockEntStreamEst)
+         UnusualStreamCondit, GenComments,SockEntStreamEst,
+         QA.SockEntStreamEst)
 
 
-write_csv(SENs.review, paste0("AUC.res.time.review-",review.subject,".csv"), na = "")
+#write_csv(SENs.review, paste0("AUC.res.time.review-",review.subject,".csv"), na = "")
 #after happy with this export, re-save as excel and colour new columns to be filled in
 
 
@@ -146,60 +152,60 @@ write_csv(SENs.review, paste0("AUC.res.time.review-",review.subject,".csv"), na 
 #### CHINOOK version ####
 
 # filter SILs by above selections 
-
-SILs.to.review <- review.streams %>% 
-  left_join(SILs.raw, by=c("StreamId"="StreamID")) %>% 
-  filter(Inspection.Year %in% years.filter,
-         TargetChin %in% T) %>%  #only include SILs where CH were targeted
-  mutate(julian.day = yday(SilDate),obs.eff = as.numeric(""), QA.comments = "", surveyed.full.extent = "",
-         proportion.surveyed=as.numeric(""), barriers.present = "")
-
-write_csv(SILs.to.review, paste0("SILs.toreview-",review.subject,".csv"))
-#after happy with this export, re-save as excel and colour new columns to be filled in
-
-
-# filter SENs of interest by above selections - *change species if not looking for sockeye* 
-
-SENs.review <- review.streams %>% 
-  left_join(SENs.raw, by=c("StreamId"="StreamID")) %>% 
-  filter(Year %in% years.filter,
-         ChinAnnualEst != "N/I") %>%  #exclude only those with "N/I" (not inspected)
-  select(StreamName,Year,ChinNoStreamInsp,
-         ChinEstMeth.num = ChinEstMeth,
-         ChinEstClassification.num=ChinEstClassification,
-         ChinAnnualEst, AnnualEstRationale, UnusualFishCond,
-         UnusualStreamCondit, GenComments,ChinEntStreamEst) %>% 
-  arrange(StreamName,Year) %>% 
-  mutate(ChinEstMeth = recode(ChinEstMeth.num, `1` = "peak.liveplusdead",
-                              `2` = "peak.livepluscumuldead",
-                              `3` = "AUC", `4` = "fixed.site.census",
-                              `5` = "expert.opinion",`6` = "redd.count",
-                              `8`= "mark.recap", `12`= "other")) %>% 
-  mutate(ChinEstClassification = recode(ChinEstClassification.num, `1` = "census",
-                                        `2` = "MR.or.breachedfence",`3` = "hi.res.stream.survey", 
-                                        `4` = "med.res.stream.survey",
-                                        `5` = "low.res.stream.survey",`6` = "AP.NO.NI.DNS")) %>% 
-  mutate(QA.ChinNoStreamInsp = NA, residence.time1 = NA, res.time.source1 = NA, 
-         residence.time2 = NA, res.time.source2 = NA,
-         holders.or.spawners = NA, QA.comments = NA,
-         QA.ChinEstMeth.num = NA,
-         QA.ChinEstClassification.num = NA,
-         QA.ChinAnnualEst = NA,
-         QA.ChinEntStreamEst = NA) %>% 
-  select(StreamName,Year,ChinNoStreamInsp,QA.ChinNoStreamInsp,ChinEstMeth.num,
-         ChinEstMeth,QA.ChinEstMeth.num,
-         ChinEstClassification.num, ChinEstClassification,QA.ChinEstClassification.num,
-         ChinAnnualEst,QA.ChinAnnualEst,residence.time1,res.time.source1,
-         residence.time2,res.time.source2, holders.or.spawners, QA.comments,
-         AnnualEstRationale, UnusualFishCond,
-         UnusualStreamCondit, GenComments,ChinEntStreamEst, QA.ChinEntStreamEst)
-
-
-write_csv(SENs.review, paste0("AUC.res.time.review-",review.subject,".csv"), na = "")
-#after happy with this export, re-save as excel and colour new columns to be filled in
-
-
-
+# 
+# SILs.to.review <- review.streams %>% 
+#   left_join(SILs.raw, by=c("StreamId"="StreamID")) %>% 
+#   filter(Inspection.Year %in% years.filter,
+#          TargetChin %in% T) %>%  #only include SILs where CH were targeted
+#   mutate(julian.day = yday(SilDate),obs.eff = as.numeric(""), QA.comments = "", surveyed.full.extent = "",
+#          proportion.surveyed=as.numeric(""), barriers.present = "")
+# 
+# #write_csv(SILs.to.review, paste0("SILs.toreview-",review.subject,".csv"))
+# #after happy with this export, re-save as excel and colour new columns to be filled in
+# 
+# 
+# # filter SENs of interest by above selections - *change species if not looking for sockeye* 
+# 
+# SENs.review <- review.streams %>% 
+#   left_join(SENs.raw, by=c("StreamId"="StreamID")) %>% 
+#   filter(Year %in% years.filter,
+#          ChinAnnualEst != "N/I") %>%  #exclude only those with "N/I" (not inspected)
+#   select(StreamName,Year,ChinNoStreamInsp,
+#          ChinEstMeth.num = ChinEstMeth,
+#          ChinEstClassification.num=ChinEstClassification,
+#          ChinAnnualEst, AnnualEstRationale, UnusualFishCond,
+#          UnusualStreamCondit, GenComments,ChinEntStreamEst) %>% 
+#   arrange(StreamName,Year) %>% 
+#   mutate(ChinEstMeth = recode(ChinEstMeth.num, `1` = "peak.liveplusdead",
+#                               `2` = "peak.livepluscumuldead",
+#                               `3` = "AUC", `4` = "fixed.site.census",
+#                               `5` = "expert.opinion",`6` = "redd.count",
+#                               `8`= "mark.recap", `12`= "other")) %>% 
+#   mutate(ChinEstClassification = recode(ChinEstClassification.num, `1` = "census",
+#                                         `2` = "MR.or.breachedfence",`3` = "hi.res.stream.survey", 
+#                                         `4` = "med.res.stream.survey",
+#                                         `5` = "low.res.stream.survey",`6` = "AP.NO.NI.DNS")) %>% 
+#   mutate(QA.ChinNoStreamInsp = NA, residence.time1 = NA, res.time.source1 = NA, 
+#          residence.time2 = NA, res.time.source2 = NA,
+#          holders.or.spawners = NA, QA.comments = NA,
+#          QA.ChinEstMeth.num = NA,
+#          QA.ChinEstClassification.num = NA,
+#          QA.ChinAnnualEst = NA,
+#          QA.ChinEntStreamEst = NA) %>% 
+#   select(StreamName,Year,ChinNoStreamInsp,QA.ChinNoStreamInsp,ChinEstMeth.num,
+#          ChinEstMeth,QA.ChinEstMeth.num,
+#          ChinEstClassification.num, ChinEstClassification,QA.ChinEstClassification.num,
+#          ChinAnnualEst,QA.ChinAnnualEst,residence.time1,res.time.source1,
+#          residence.time2,res.time.source2, holders.or.spawners, QA.comments,
+#          AnnualEstRationale, UnusualFishCond,
+#          UnusualStreamCondit, GenComments,ChinEntStreamEst, QA.ChinEntStreamEst)
+# 
+# 
+# #write_csv(SENs.review, paste0("AUC.res.time.review-",review.subject,".csv"), na = "")
+# #after happy with this export, re-save as excel and colour new columns to be filled in
+# 
+ 
+ 
 
 # Reference figures and tables ####
 
@@ -217,7 +223,7 @@ sil.summary.by.yr <- SILs.to.review %>%
               values_from = silx) %>% 
   arrange(StreamName)
 
-write_csv(sil.summary.by.yr,paste0("SIL.presencebyyr-",review.subject,".csv")) 
+#write_csv(sil.summary.by.yr,paste0("SIL.presencebyyr-",review.subject,".csv")) 
 
 
 #make table of SENs present by stream and year
@@ -231,7 +237,7 @@ sen.summary.by.yr <- SENs.review %>%
               values_from = senx) %>% 
   arrange(StreamName)
 
-write_csv(sen.summary.by.yr,paste0("SEN.presencebyyr-",review.subject,".csv"))
+#write_csv(sen.summary.by.yr,paste0("SEN.presencebyyr-",review.subject,".csv"))
 
 
 #### Timing of peak spawn versus all targeted surveys ####
@@ -244,14 +250,24 @@ stream.ids <- unique(SILs.to.review$StreamId)
 
 #remove streams where SK never recorded, even as a 0, though they were targeted:
 #these should probably be corrected in database, either to change to 0 seen or remove as target species:
-(bogus.targets <- SILs.to.review %>% 
-  group_by(StreamId, StreamName) %>% 
-  summarize(max.Sock_AL_Spawning = max(Sock_AL_Spawning,na.rm=T)) %>% 
+
+# SOCKEYE:
+(bogus.targets <- SILs.to.review %>%
+  group_by(StreamId, StreamName) %>%
+  summarize(max.Sock_AL_Spawning = max(Sock_AL_Spawning,na.rm=T)) %>%
   filter(is.na(max.Sock_AL_Spawning)|is.infinite(max.Sock_AL_Spawning)))
 
 stream.ids <- setdiff(stream.ids,bogus.targets$StreamId)
 
-#note that if you run this, this is going to save individual 
+# # CHINOOK:
+# (bogus.targets <- SILs.to.review %>% 
+#     group_by(StreamId, StreamName) %>% 
+#     summarize(max.Chinook_AL_Spawning = max(Chinook_AL_Spawning,na.rm=T)) %>% 
+#     filter(is.na(max.Chinook_AL_Spawning)|is.infinite(max.Chinook_AL_Spawning)))
+# stream.ids <- setdiff(stream.ids,bogus.targets$StreamId)
+
+
+#note that if you run this loop below, this is going to save individual 
 # timing plots for each stream into a timing.plots folder.
 # If you don't want to do this, then comment out and skip.
 
@@ -284,8 +300,7 @@ for(i in stream.ids){
   
   ggsave(plot = plot.peak.spawn, path = "./timing.plots/",
          filename = paste0(unique(tmp.spawn$StreamName),"-timing.png"),
-         width = 6, height=4)
-
+         width = 7, height=4)
 }
 
 
@@ -379,7 +394,144 @@ st_write(all.dd,
 
 
 
+# ANALYSIS ####
 
+# we are trying to get a consistent time series of stream estimates for Babine
+# sockeye. Re-calc the auc 
+
+#AUC functions
+organize_data <- function (data) {
+  data %>%
+    mutate(count=as.numeric(expanded)) %>% 
+    add_row(julian=0, count=0) %>%
+    add_row(julian = 364, count=0) %>% 
+    arrange(julian) %>%
+    select(count, day=julian)%>%
+    mutate(survey = seq(1, nrow(data)+2, by=1)) %>%  #numbers the surveys
+    #add theoretical first day
+    mutate(day.x1 = lead(day,1)-res.time) %>% 
+    mutate(day.x2 = lead(day,1)-
+             lead(count,1)/(abs(lead(count,2)-lead(count,1))/(lead(day,2)-lead(day,1)))) %>% 
+    mutate(day = ifelse(day %in% 0, pmax(day.x1,day.x2, na.rm=T),day)) %>% 
+    #add theoretical last day 
+    mutate(day.x3 = lag(day,1)+res.time) %>% 
+    mutate(day.x4 = lag(day,1)-
+             lag(count,1)/(abs(lag(count,2)-lag(count,1))/(lag(day,2)-lag(day,1)))) %>% 
+    mutate(day = ifelse(day %in% last(day), pmin(day.x3,day.x4, na.rm=T),day)) %>% 
+    select(-c(day.x1,day.x2, day.x3, day.x4))
+}   
+
+# Fish days function:
+calc_fish_days <- function (day, count, res.time) {
+  
+  data %>% mutate(day_1 = lag(day)) %>% 
+    mutate(count_1 = lag(count)) %>%
+    mutate(int = day - day_1) %>% 
+    mutate(fish_days = c(NA,diff(day)*zoo::rollmean(count,2))) %>% 
+    summarize(fish_days = sum(na.omit(fish_days))) 
+}
+
+# AUC calc (fish days/RT)
+calc_auc_est <- function (data) {
+  data %>% 
+    test.organize_data() %>% 
+    calc_fish_days() %>% 
+    mutate(auc = fish_days/res.time) %>% 
+    select(auc)
+}
+
+
+#combining these into one function which also defines residence time:
+
+test.auc.allinone <- function (day, count, res.time){
+  data.frame(day, count) %>% 
+    add_row(day=0, count=0) %>% 
+    add_row(day = 364, count=0) %>% 
+    arrange(day) %>% 
+    mutate(survey = seq(1, length(day), by=1))  %>%  #numbers the surveys
+    #add theoretical first day
+    mutate(day.x1 = lead(day,1)-res.time) %>% 
+    mutate(day.x2 = lead(day,1)-
+             lead(count,1)/(abs(lead(count,2)-lead(count,1))/(lead(day,2)-lead(day,1)))) %>% 
+    mutate(day = ifelse(day %in% 0, pmax(day.x1,day.x2, na.rm=T),day)) %>% 
+    #add theoretical last day 
+    mutate(day.x3 = lag(day,1)+res.time) %>% 
+    mutate(day.x4 = lag(day,1)-
+             lag(count,1)/(abs(lag(count,2)-lag(count,1))/(lag(day,2)-lag(day,1)))) %>% 
+    mutate(day = ifelse(day %in% last(day), pmin(day.x3,day.x4, na.rm=T),day)) %>% 
+    select(-c(day.x1,day.x2, day.x3, day.x4)) %>% 
+    #good till here
+    mutate(day_1 = lag(day))  %>% 
+    mutate(count_1 = lag(count))  %>%
+    mutate(int = day - day_1) %>% 
+    mutate(fish_days = c(NA,diff(day)*zoo::rollmean(count,2))) %>% 
+    summarize(fish_days = sum(na.omit(fish_days)))   %>% 
+    mutate(auc = fish_days/res.time) %>% 
+    select(auc)
+}
+
+test.auc.allinone(day = c(10,20,30), count = c(100, 200, 50), 
+                  res.time=15)
+
+# import and attempt to re-calculate the AUC for AUC estimates.
+
+bab.sils <- read_excel("SILs.babine.SK_4-Feb-2025export.xlsx", 
+                       sheet="SILs.babine.SK", na = "NA")
+
+BabS4.201022 <- bab.sils %>% 
+  dplyr::filter(StreamId %in% 464) %>% #babine river s4
+  dplyr::select(StreamId, StreamName, Inspection.Year,SilDate,Observer,
+         Affiliation,TargetSockeye,PrimaryInspMode,Sock_AL_HoldOutside,
+         Sock_AL_Hold,Sock_AL_Spawning,Sock_AL_ObsTotal,
+         Sock_AL_EstTotal,Sock_AL_New,Sock_AL_EstReliability,
+         Sock_AL_FishCountability,Sock_AD_Obs,Sock_AD_Est,
+         Sock_AD_.PreSpawnMort,obs.eff,surveyed.full.extent,
+         proportion.surveyed,barriers.present) %>% 
+  mutate(julian = yday(SilDate), 
+         obs.eff = ifelse(!is.na(obs.eff),obs.eff,0.8),
+         expanded = Sock_AL_Spawning/obs.eff) %>% 
+  filter(TargetSockeye %in% T)
+
+ggplot(BabS4.201022)+
+  geom_point(aes(x=julian,y=expanded, col=as.factor(Inspection.Year)))+
+  geom_line(aes(x=julian,y=expanded,col=as.factor(Inspection.Year)))
+
+#recalc auc
+BabS4aucs <- BabS4.201022 %>% 
+  dplyr::group_by(Inspection.Year) %>% 
+  dplyr::summarize(test.auc.allinone(day = julian, count= expanded, 
+                                     res.time=15))
+
+plot.new.calc.BabS4 <- ggplot(BabS4aucs)+
+  geom_point(aes(x=Inspection.Year, y=auc))+
+  geom_line(aes(x=Inspection.Year, y=auc))+
+  scale_x_continuous(breaks= seq(2010,2022,1))+
+  scale_y_continuous(limits = c(0,27000), breaks = seq(0,27000,5000))
+plot.new.calc.BabS4
+
+# check what the original estimates by year were
+
+bab.auc <- read_excel("AUC.restime.bab_4-Feb-2025export.xlsx", 
+           sheet="AUC.restime.bab", na = NA)
+
+BabS4auc <- bab.auc %>% 
+  filter(StreamName %in% "BABINE RIVER (SECTION 4)") %>% 
+  mutate(SockAnnualEst.num = as.numeric(SockAnnualEst))
+
+plot.old.calc.BabS4 <- ggplot(BabS4auc)+
+  geom_point(aes(x=Year, y=SockAnnualEst.num, shape=`Timing capured?`))+
+  geom_line(aes(x=Year, y=SockAnnualEst.num))+
+  scale_x_continuous(breaks= seq(2010,2022,1))+
+  scale_y_continuous(limits = c(0,27000), breaks = seq(0,27000,5000))+
+  theme(legend.position = "bottom")
+plot.old.calc.BabS4
+
+
+
+plot(arrangeGrob(plot.new.calc.BabS4,plot.old.calc.BabS4))
+
+
+#Kristen's older script:
 
 # Look at SENs and compare to current year 2022
 
