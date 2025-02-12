@@ -32,20 +32,47 @@ streams <- read_excel("Streams.xlsx")
 
 
 #### Watershed review selection - CHANGE THESE TO MATCH YOUR REVIEW ####
+# 
+# review.subject <- "babineSK2010-2022"
+# 
+# # filter for years of interest:
+# years.filter <- c(2010:2022) #those years after the last large babine review
+# unique(years.filter)
+# 
+# # filter for streams of interest using grouping identifiers 
+# 
+# #babine watershed
+# review.streams <- streams %>% 
+#   mutate(wscd.short = substr(WATERSHED_Code,1,3)) %>% 
+#   filter(wscd.short %in% "480") %>% # select those streams and lakes within the Babine watershed (480)
+#   select(StreamId, StreamName,WATERSHED_Code, Active)
+# 
+# exp.streams <- review.streams %>% 
+#   mutate(QA.SegmentStartLatDD = "",QA.SegmentStartLongDD="",
+#          QA.SegmentStopLatDD = "", QA.SegmentStopLongDD="",
+#          QA.SegmentComments = "")
 
-review.subject <- "babineSK2010-2022"
+#write_csv(exp.streams, paste0("Streams.toreview-",review.subject,".csv"))
+#after happy with this export, re-save as excel and colour new columns to be filled in
+
+# Nanika SK and CH
+
+review.subject <- "nanikaSKCH2004-2022"
 
 # filter for years of interest:
-years.filter <- c(2010:2022) #those years after the last large babine review
+years.filter <- c(2004:2022) #those years after the last large babine review
 unique(years.filter)
 
 # filter for streams of interest using grouping identifiers 
 
-#babine watershed
-review.streams <- streams %>% 
-  mutate(wscd.short = substr(WATERSHED_Code,1,3)) %>% 
-  filter(wscd.short %in% "480") %>% # select those streams and lakes within the Babine watershed (480)
-  select(StreamId, StreamName,WATERSHED_Code, Active)
+str(streams)
+
+
+#nanika and morice watershed
+ review.streams <- streams %>% 
+   filter(StreamId %in% c(428)) %>% # select those streams and lakes within the Morice watershed (460)
+   select(StreamId, StreamName,WATERSHED_Code, Active)
+
 
 exp.streams <- review.streams %>% 
   mutate(QA.SegmentStartLatDD = "",QA.SegmentStartLongDD="",
@@ -53,9 +80,6 @@ exp.streams <- review.streams %>%
          QA.SegmentComments = "")
 
 #write_csv(exp.streams, paste0("Streams.toreview-",review.subject,".csv"))
-#after happy with this export, re-save as excel and colour new columns to be filled in
-
-
 
 
 # # Morice and Nanika version:
@@ -132,8 +156,10 @@ SENs.review <- review.streams %>%
          QA.SockEstMeth.num = NA,
          QA.SockEstClassification.num = NA,
          QA.SockAnnualEst = NA,
-         QA.SockEntStreamEst = NA) %>% 
-  select(StreamName,Year,SockNoStreamInsp,QA.SockNoStreamInsp,SockEstMeth.num,
+         QA.SockEntStreamEst = NA,
+         Timing.captured = NA) %>% 
+  select(StreamName,Year,SockNoStreamInsp,
+         QA.SockNoStreamInsp,Timing.captured,SockEstMeth.num,
          SockEstMeth,QA.SockEstMeth.num,
          SockEstClassification.num, SockEstClassification,QA.SockEstClassification.num,
          SockAnnualEst,QA.SockAnnualEst,residence.time1,res.time.source1,
@@ -143,7 +169,7 @@ SENs.review <- review.streams %>%
          QA.SockEntStreamEst)
 
 
-#write_csv(SENs.review, paste0("AUC.res.time.review-",review.subject,".csv"), na = "")
+write_csv(SENs.review, paste0("AUC.res.time.review-",review.subject,".csv"), na = "")
 #after happy with this export, re-save as excel and colour new columns to be filled in
 
 
@@ -223,7 +249,7 @@ sil.summary.by.yr <- SILs.to.review %>%
               values_from = silx) %>% 
   arrange(StreamName)
 
-#write_csv(sil.summary.by.yr,paste0("SIL.presencebyyr-",review.subject,".csv")) 
+write_csv(sil.summary.by.yr,paste0("SIL.presencebyyr-",review.subject,".csv")) 
 
 
 #make table of SENs present by stream and year
@@ -237,7 +263,7 @@ sen.summary.by.yr <- SENs.review %>%
               values_from = senx) %>% 
   arrange(StreamName)
 
-#write_csv(sen.summary.by.yr,paste0("SEN.presencebyyr-",review.subject,".csv"))
+write_csv(sen.summary.by.yr,paste0("SEN.presencebyyr-",review.subject,".csv"))
 
 
 #### Timing of peak spawn versus all targeted surveys ####
