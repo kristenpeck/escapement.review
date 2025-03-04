@@ -425,46 +425,46 @@ st_write(all.dd,
 # we are trying to get a consistent time series of stream estimates for Babine
 # sockeye. Re-calc the auc 
 
-#AUC functions
-organize_data <- function (data) {
-  data %>%
-    mutate(count=as.numeric(expanded)) %>% 
-    add_row(julian=0, count=0) %>%
-    add_row(julian = 364, count=0) %>% 
-    arrange(julian) %>%
-    select(count, day=julian)%>%
-    mutate(survey = seq(1, nrow(data)+2, by=1)) %>%  #numbers the surveys
-    #add theoretical first day
-    mutate(day.x1 = lead(day,1)-res.time) %>% 
-    mutate(day.x2 = lead(day,1)-
-             lead(count,1)/(abs(lead(count,2)-lead(count,1))/(lead(day,2)-lead(day,1)))) %>% 
-    mutate(day = ifelse(day %in% 0, pmax(day.x1,day.x2, na.rm=T),day)) %>% 
-    #add theoretical last day 
-    mutate(day.x3 = lag(day,1)+res.time) %>% 
-    mutate(day.x4 = lag(day,1)-
-             lag(count,1)/(abs(lag(count,2)-lag(count,1))/(lag(day,2)-lag(day,1)))) %>% 
-    mutate(day = ifelse(day %in% last(day), pmin(day.x3,day.x4, na.rm=T),day)) %>% 
-    select(-c(day.x1,day.x2, day.x3, day.x4))
-}   
-
-# Fish days function:
-calc_fish_days <- function (day, count, res.time) {
-  
-  data %>% mutate(day_1 = lag(day)) %>% 
-    mutate(count_1 = lag(count)) %>%
-    mutate(int = day - day_1) %>% 
-    mutate(fish_days = c(NA,diff(day)*zoo::rollmean(count,2))) %>% 
-    summarize(fish_days = sum(na.omit(fish_days))) 
-}
-
-# AUC calc (fish days/RT)
-calc_auc_est <- function (data) {
-  data %>% 
-    test.organize_data() %>% 
-    calc_fish_days() %>% 
-    mutate(auc = fish_days/res.time) %>% 
-    select(auc)
-}
+# #AUC functions
+# organize_data <- function (data) {
+#   data %>%
+#     mutate(count=as.numeric(expanded)) %>% 
+#     add_row(julian=0, count=0) %>%
+#     add_row(julian = 364, count=0) %>% 
+#     arrange(julian) %>%
+#     select(count, day=julian)%>%
+#     mutate(survey = seq(1, nrow(data)+2, by=1)) %>%  #numbers the surveys
+#     #add theoretical first day
+#     mutate(day.x1 = lead(day,1)-res.time) %>% 
+#     mutate(day.x2 = lead(day,1)-
+#              lead(count,1)/(abs(lead(count,2)-lead(count,1))/(lead(day,2)-lead(day,1)))) %>% 
+#     mutate(day = ifelse(day %in% 0, pmax(day.x1,day.x2, na.rm=T),day)) %>% 
+#     #add theoretical last day 
+#     mutate(day.x3 = lag(day,1)+res.time) %>% 
+#     mutate(day.x4 = lag(day,1)-
+#              lag(count,1)/(abs(lag(count,2)-lag(count,1))/(lag(day,2)-lag(day,1)))) %>% 
+#     mutate(day = ifelse(day %in% last(day), pmin(day.x3,day.x4, na.rm=T),day)) %>% 
+#     select(-c(day.x1,day.x2, day.x3, day.x4))
+# }   
+# 
+# # Fish days function:
+# calc_fish_days <- function (day, count, res.time) {
+#   
+#   data %>% mutate(day_1 = lag(day)) %>% 
+#     mutate(count_1 = lag(count)) %>%
+#     mutate(int = day - day_1) %>% 
+#     mutate(fish_days = c(NA,diff(day)*zoo::rollmean(count,2))) %>% 
+#     summarize(fish_days = sum(na.omit(fish_days))) 
+# }
+# 
+# # AUC calc (fish days/RT)
+# calc_auc_est <- function (data) {
+#   data %>% 
+#     test.organize_data() %>% 
+#     calc_fish_days() %>% 
+#     mutate(auc = fish_days/res.time) %>% 
+#     select(auc)
+# }
 
 
 #combining these into one function which also defines residence time:
@@ -496,10 +496,14 @@ test.auc.allinone <- function (day, count, res.time){
     select(auc)
 }
 
+#example:
 test.auc.allinone(day = c(10,20,30), count = c(100, 200, 50), 
                   res.time=15)
 
-# import and attempt to re-calculate the AUC for AUC estimates.
+
+# import and re-calculate the AUC for AUC estimates.
+#make these into a function so it can be re-done repeatedly
+
 
 bab.sils <- read_excel("SILs.babine.SK_4-Feb-2025export.xlsx", 
                        sheet="SILs.babine.SK", na = "NA")
@@ -555,6 +559,55 @@ plot.old.calc.BabS4
 
 
 plot(arrangeGrob(plot.new.calc.BabS4,plot.old.calc.BabS4))
+
+
+# Nanika SK redo:
+
+nan.auc.sk <- read_excel("./nanikaSK/finished/AUC.res.time.review-nanikaSKCH2004-2022.xlsx",na = "NA")
+nan.sil.sk <- read_excel("./nanikaSK/finished/SILs.toreview-nanikaSKCH2004-2022.xlsx",na = "NA")
+str(nan.sil.sk)
+
+nansk.200422 <- nan.sil.sk %>% 
+  dplyr::select(StreamId, StreamName, Inspection.Year,SilDate,Observer,
+                Affiliation,TargetSockeye,PrimaryInspMode,Sock_AL_HoldOutside,
+                Sock_AL_Hold,Sock_AL_Spawning,Sock_AL_ObsTotal,
+                Sock_AL_EstTotal,Sock_AL_New,Sock_AL_EstReliability,
+                Sock_AL_FishCountability,Sock_AD_Obs,Sock_AD_Est,
+                Sock_AD_.PreSpawnMort,obs.eff,surveyed.full.extent,
+                proportion.surveyed,barriers.present) %>% 
+  mutate(julian = yday(SilDate), 
+         ave.obs.eff = mean(obs.eff, na.rm= T),
+         obs.eff = ifelse(!is.na(obs.eff),obs.eff,ave.obs.eff), #use ave. obs eff 
+         expanded = Sock_AL_Spawning/obs.eff,
+         PrimaryInspMode = case_match(PrimaryInspMode,"Helicoptor"~"Helicopter",
+                "Snorkel/Swin"~"Snorkel/Swim", .default = PrimaryInspMode)) %>% 
+  filter(TargetSockeye %in% T,PrimaryInspMode %in% c("Helicopter","Stream Walk"),
+         surveyed.full.extent %in% "Yes")
+# filter out snorkel
+
+ggplot(nansk.200422)+
+  geom_point(aes(x=julian,y=expanded, col=as.factor(Inspection.Year)))+
+  geom_line(aes(x=julian,y=expanded,col=as.factor(Inspection.Year)))
+
+
+#recalc auc
+nan.sk.aucs <- nansk.200422 %>% 
+  dplyr::group_by(Inspection.Year) %>% 
+  dplyr::summarize(test.auc.allinone(day = julian, count= expanded, 
+                                     res.time=10))
+
+plot.new.calc.nansk <- ggplot(nan.sk.aucs)+
+  geom_point(aes(x=Inspection.Year, y=auc))+
+  geom_line(aes(x=Inspection.Year, y=auc))+
+  geom_line(data = nan.auc.sk, aes(x=Year, y = as.numeric(QA.SockAnnualEst)))+
+  #scale_x_continuous(breaks= seq(min(nan.sk.aucs$Inspection.Year),
+   #                              max(nan.sk.aucs$Inspection.Year),1))+
+  scale_x_continuous(limits= c(2018,2024))+
+  scale_y_continuous(limits = c(0,max(nan.sk.aucs$auc, na.rm=T)))
+plot.new.calc.nansk
+
+
+
 
 
 #Kristen's older script:
