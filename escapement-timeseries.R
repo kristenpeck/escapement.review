@@ -20,13 +20,32 @@ library(gridExtra)
 # These three spreadsheets are unaltered exports from Stream Esc_DB_MasterDataset.accdb
 #found in S:\Stock Assessment\ESCAPEMENT\Databases on Dec 18th
 
+#Kristen's copy of NCSTAD data:
+SILs.raw23 <- read_excel("MasterStreamInspection2023.xlsx",
+                         .name_repair = "universal")
+
+SENs.raw23 <- read_excel("MastertblSEN2023.xlsx",
+                         .name_repair = "universal")
+
+SILs.raw24 <- read_excel("MasterStreamInspection2024.xlsx",
+                         .name_repair = "universal")
+#note, no SENs entered yet for 2024
+
+
+# from stock drive:
 SILs.raw <- read_excel("MasterStreamInspection2004-2022.xlsx",
-                       .name_repair = "universal")
+                       .name_repair = "universal") %>% 
+  rbind(SILs.raw23,SILs.raw24)
 
 SENs.raw <- read_excel("MastertblSEN2004-2022.xlsx",
-                       .name_repair = "universal")
+                       .name_repair = "universal") %>% 
+  rbind(SENs.raw23)
 
 streams <- read_excel("Streams.xlsx")
+
+
+
+
 
 # # # # # # # # # # # # # # # # # # # # # # # # # 
 
@@ -599,10 +618,10 @@ nan.sk.aucs <- nansk.200422 %>%
 plot.new.calc.nansk <- ggplot(nan.sk.aucs)+
   geom_point(aes(x=Inspection.Year, y=auc))+
   geom_line(aes(x=Inspection.Year, y=auc))+
-  geom_line(data = nan.auc.sk, aes(x=Year, y = as.numeric(QA.SockAnnualEst)))+
+  geom_line(data = nan.auc.sk, aes(x=Year, y = as.numeric(QA.SockAnnualEst)), col="red")+
   #scale_x_continuous(breaks= seq(min(nan.sk.aucs$Inspection.Year),
    #                              max(nan.sk.aucs$Inspection.Year),1))+
-  scale_x_continuous(limits= c(2018,2024))+
+  #scale_x_continuous(limits= c(2018,2024))+
   scale_y_continuous(limits = c(0,max(nan.sk.aucs$auc, na.rm=T)))
 plot.new.calc.nansk
 
