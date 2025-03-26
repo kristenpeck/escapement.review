@@ -20,6 +20,36 @@ library(gridExtra)
 # These three spreadsheets are unaltered exports from Stream Esc_DB_MasterDataset.accdb
 #found in S:\Stock Assessment\ESCAPEMENT\Databases on Dec 18th
 
+#ggplot theme
+theme_babine4 <- function(base_size = 14) {
+  theme_bw(base_size = base_size) %+replace%
+    theme(
+      # L'ensemble de la figure
+      plot.title = element_text(size = rel(1), face = "bold", margin = margin(0,0,5,0), hjust = 0),
+      # Zone où se situe le graphique
+      #panel.grid.minor = element_blank(),
+      panel.border = element_blank(),
+      # Les axes
+      axis.title = element_text(size = rel(0.85), face = "bold"),
+      axis.text.x = element_text(size = rel(0.80), face = "bold", 
+                                 angle=60, hjust = 1.2, vjust=1.2),
+      axis.text.y = element_text(size = rel(0.80), face = "bold"),
+      axis.line = element_line(color = "black", arrow = arrow(length = unit(0.3, "lines"), type = "closed")),
+      # La légende
+      legend.position = "bottom",
+      legend.title = element_text(size = rel(0.85), face = "bold"),
+      legend.text = element_text(size = rel(0.70), face = "bold"),
+      legend.key = element_rect(fill = "transparent", colour = NA),
+      legend.key.size = unit(1.5, "lines"),
+      legend.background = element_rect(fill = "transparent", colour = NA),
+      # Les étiquettes dans le cas d'un facetting
+      strip.background = element_rect(fill = "#17252D", color = "#17252D"),
+      strip.text = element_text(size = rel(0.75), face = "bold", color = "white", margin = margin(5,0,5,0))
+    )
+}
+
+
+
 #Kristen's copy of NCSTAD data:
 SILs.raw23 <- read_excel("MasterStreamInspection2023.xlsx",
                          .name_repair = "universal")
@@ -51,54 +81,54 @@ streams <- read_excel("Streams.xlsx")
 
 
 #### Watershed review selection - CHANGE THESE TO MATCH YOUR REVIEW ####
-# 
-# review.subject <- "babineSK2010-2022"
-# 
-# # filter for years of interest:
-# years.filter <- c(2010:2022) #those years after the last large babine review
-# unique(years.filter)
-# 
-# # filter for streams of interest using grouping identifiers 
-# 
-# #babine watershed
-# review.streams <- streams %>% 
-#   mutate(wscd.short = substr(WATERSHED_Code,1,3)) %>% 
-#   filter(wscd.short %in% "480") %>% # select those streams and lakes within the Babine watershed (480)
-#   select(StreamId, StreamName,WATERSHED_Code, Active)
-# 
-# exp.streams <- review.streams %>% 
-#   mutate(QA.SegmentStartLatDD = "",QA.SegmentStartLongDD="",
-#          QA.SegmentStopLatDD = "", QA.SegmentStopLongDD="",
-#          QA.SegmentComments = "")
 
-#write_csv(exp.streams, paste0("Streams.toreview-",review.subject,".csv"))
-#after happy with this export, re-save as excel and colour new columns to be filled in
-
-# Nanika SK and CH
-
-review.subject <- "nanikaSKCH2004-2022"
+review.subject <- "babineSK2019"
 
 # filter for years of interest:
-years.filter <- c(2004:2022) #those years after the last large babine review
-unique(years.filter)
-
-# filter for streams of interest using grouping identifiers 
-
-str(streams)
+years.filter <- c(2019) #those years after the last large babine review
 
 
-#nanika and morice watershed
- review.streams <- streams %>% 
-   filter(StreamId %in% c(428)) %>% # select those streams and lakes within the Morice watershed (460)
-   select(StreamId, StreamName,WATERSHED_Code, Active)
+# filter for streams of interest using grouping identifiers
 
+#babine watershed
+review.streams <- streams %>%
+  mutate(wscd.short = substr(WATERSHED_Code,1,3)) %>%
+  filter(wscd.short %in% "480") %>% # select those streams and lakes within the Babine watershed (480)
+  select(StreamId, StreamName,WATERSHED_Code, Active)
 
-exp.streams <- review.streams %>% 
+exp.streams <- review.streams %>%
   mutate(QA.SegmentStartLatDD = "",QA.SegmentStartLongDD="",
          QA.SegmentStopLatDD = "", QA.SegmentStopLongDD="",
          QA.SegmentComments = "")
 
 #write_csv(exp.streams, paste0("Streams.toreview-",review.subject,".csv"))
+#after happy with this export, re-save as excel and colour new columns to be filled in
+
+# # Nanika SK and CH
+# 
+# review.subject <- "nanikaSKCH2004-2024"
+# 
+# # filter for years of interest:
+# years.filter <- c(2004:2024) 
+# unique(years.filter)
+# 
+# # filter for streams of interest using grouping identifiers 
+# 
+# str(streams)
+# 
+# 
+# #nanika river only
+#  review.streams <- streams %>% 
+#    filter(StreamId %in% c(428)) %>% 
+#    select(StreamId, StreamName,WATERSHED_Code, Active)
+# 
+# 
+# exp.streams <- review.streams %>% 
+#   mutate(QA.SegmentStartLatDD = "",QA.SegmentStartLongDD="",
+#          QA.SegmentStopLatDD = "", QA.SegmentStopLongDD="",
+#          QA.SegmentComments = "")
+# 
+# #write_csv(exp.streams, paste0("Streams.toreview-",review.subject,".csv"))
 
 
 # # Morice and Nanika version:
@@ -139,12 +169,14 @@ exp.streams <- review.streams %>%
 
 SILs.to.review <- review.streams %>% 
   left_join(SILs.raw, by=c("StreamId"="StreamID")) %>% 
-  filter(Inspection.Year %in% years.filter,
-         TargetSockeye %in% T) %>%  #only include SILs where sockeye were targeted
+  filter(Inspection.Year %in% years.filter) %>% 
+         #TargetSockeye %in% T) %>%  #only include SILs where sockeye were targeted
   mutate(julian.day = yday(SilDate),obs.eff = as.numeric(""), QA.comments = "", surveyed.full.extent = "",
-         proportion.surveyed=as.numeric(""), barriers.present = "")
+         proportion.surveyed=as.numeric(""), barriers.present = "",
+         UseForPeakCount = NA,
+         UseForAUC = NA)
 
-#write_csv(SILs.to.review, paste0("SILs.toreview-",review.subject,".csv"))
+write_csv(SILs.to.review, paste0("SILs.toreview-",review.subject,".csv"))
 #after happy with this export, re-save as excel and colour new columns to be filled in
 
 
@@ -524,60 +556,197 @@ test.auc.allinone(day = c(10,20,30), count = c(100, 200, 50),
 #make these into a function so it can be re-done repeatedly
 
 
-bab.sils <- read_excel("SILs.babine.SK_4-Feb-2025export.xlsx", 
+
+bab.sils <- read_excel("./babineSK/SILs.babine.SK_11-Mar-2025export.xlsx", 
                        sheet="SILs.babine.SK", na = "NA")
 
-BabS4.201022 <- bab.sils %>% 
-  dplyr::filter(StreamId %in% 464) %>% #babine river s4
+BabS34.201022 <- bab.sils %>% 
+  dplyr::filter(StreamId %in% c(463,464)) %>% #babine river s4+s3
   dplyr::select(StreamId, StreamName, Inspection.Year,SilDate,Observer,
          Affiliation,TargetSockeye,PrimaryInspMode,Sock_AL_HoldOutside,
          Sock_AL_Hold,Sock_AL_Spawning,Sock_AL_ObsTotal,
          Sock_AL_EstTotal,Sock_AL_New,Sock_AL_EstReliability,
          Sock_AL_FishCountability,Sock_AD_Obs,Sock_AD_Est,
          Sock_AD_.PreSpawnMort,obs.eff,surveyed.full.extent,
-         proportion.surveyed,barriers.present) %>% 
+         proportion.surveyed,barriers.present, UseForPeakCount, UseForAUC) %>% 
   mutate(julian = yday(SilDate), 
-         obs.eff = ifelse(!is.na(obs.eff),obs.eff,0.8),
-         expanded = Sock_AL_Spawning/obs.eff) %>% 
+         obs.eff = ifelse(!is.na(obs.eff),obs.eff,1),
+         expanded = Sock_AL_Spawning/obs.eff,
+         UseForAUC = as.logical(UseForAUC),
+         UseForPeakCount = as.logical(UseForPeakCount)) %>% 
   filter(TargetSockeye %in% T)
 
-ggplot(BabS4.201022)+
-  geom_point(aes(x=julian,y=expanded, col=as.factor(Inspection.Year)))+
-  geom_line(aes(x=julian,y=expanded,col=as.factor(Inspection.Year)))
+ggplot(BabS34.201022[BabS34.201022$Inspection.Year %in% 2011,])+
+  geom_point(aes(x=julian,y=expanded, col=as.factor(StreamName)))+
+  geom_line(aes(x=julian,y=expanded,col=as.factor(StreamName)))+
+  labs(x="Julian day", y="# spawners (expanded by obs. eff)", col="Babine R S4")+
+  theme_babine4()+
+  theme(plot.title = element_text(hjust = 0.5)) +
+  theme(axis.text=element_text(size=12, hjust=1, angle=45),
+        axis.title=element_text(size=14,face="bold"))
 
 #recalc auc
-BabS4aucs <- BabS4.201022 %>% 
-  dplyr::group_by(Inspection.Year) %>% 
+BabS34aucs.14 <- BabS34.201022 %>% 
+  dplyr::filter(UseForAUC %in% T) %>% 
+  dplyr::group_by(Inspection.Year, StreamName) %>% 
   dplyr::summarize(test.auc.allinone(day = julian, count= expanded, 
-                                     res.time=15))
+                                     res.time=14))
 
-plot.new.calc.BabS4 <- ggplot(BabS4aucs)+
-  geom_point(aes(x=Inspection.Year, y=auc))+
-  geom_line(aes(x=Inspection.Year, y=auc))+
+BabS34aucs.12 <- BabS34.201022 %>% 
+  dplyr::filter(UseForAUC %in% T) %>% 
+  dplyr::group_by(Inspection.Year, StreamName) %>% 
+  dplyr::summarize(test.auc.allinone(day = julian, count= expanded, 
+                                     res.time=12))
+
+BabS34aucs.16 <- BabS34.201022 %>% 
+  dplyr::filter(UseForAUC %in% T) %>% 
+  dplyr::group_by(Inspection.Year, StreamName) %>% 
+  dplyr::summarize(test.auc.allinone(day = julian, count= expanded, 
+                                     res.time=16))
+
+plot.new.calc.BabS34 <- ggplot()+
+  geom_point(data = BabS34aucs.14, aes(x=Inspection.Year, y=auc, col=StreamName))+
+  geom_line(data = BabS34aucs.14,aes( x=Inspection.Year, y=auc, col=StreamName))+
+
+  #geom_line(data = BabS34aucs.12, aes(x=Inspection.Year, y=auc), col="gray50")+
+  #geom_line(data = BabS34aucs.16, aes( x=Inspection.Year, y=auc), col="gray50")+
   scale_x_continuous(breaks= seq(2010,2022,1))+
-  scale_y_continuous(limits = c(0,27000), breaks = seq(0,27000,5000))
-plot.new.calc.BabS4
+  labs(x="", y="Babine R S4 Stream Estimate\n +/- 2 residence days")+
+  theme_babine4()+
+  theme(plot.title = element_text(hjust = 0.5)) +
+  theme(axis.text=element_text(size=12, hjust=1, angle=45),
+        axis.title=element_text(size=14,face="bold"))
+  #scale_y_continuous(limits = c(0,27000), breaks = seq(0,27000,5000))+
+
+plot.new.calc.BabS34
 
 # check what the original estimates by year were
 
-bab.auc <- read_excel("AUC.restime.bab_4-Feb-2025export.xlsx", 
-           sheet="AUC.restime.bab", na = NA)
+bab.auc <- read_excel("./babineSK/AUC.restime.bab_4-Feb-2025export.xlsx", 
+           sheet="AUC.restime.bab")
 
-BabS4auc <- bab.auc %>% 
-  filter(StreamName %in% "BABINE RIVER (SECTION 4)") %>% 
-  mutate(SockAnnualEst.num = as.numeric(SockAnnualEst))
+# BabS34auc <- bab.auc %>% 
+#   filter(StreamName %in% "BABINE RIVER (SECTION 4)") %>% 
+#   mutate(SockAnnualEst.num = as.numeric(SockAnnualEst))
+# 
+# plot.old.calc.BabS4 <- ggplot(BabS4auc)+
+#   geom_point(aes(x=Year, y=SockAnnualEst.num))+
+#   geom_line(aes(x=Year, y=SockAnnualEst.num))+
+#   scale_x_continuous(breaks= seq(2010,2022,1))+
+#   #scale_y_continuous(limits = c(0,27000), breaks = seq(0,27000,5000))+
+#   #theme(legend.position = "bottom")+
+#   theme(plot.title = element_text(hjust = 0.5)) +
+#   theme(axis.text=element_text(size=12, hjust=1, angle=45),
+#         axis.title=element_text(size=14,face="bold"))+
+#   labs(x="year", y="Existing Stream Estimate")
+# plot.old.calc.BabS4
+# 
+# 
+# ggsave(plot(arrangeGrob(plot.new.calc.BabS4,plot.old.calc.BabS4)),
+#        filename = "BabineRS4 Example 2010-2022.png", width=6, height=6)
 
-plot.old.calc.BabS4 <- ggplot(BabS4auc)+
-  geom_point(aes(x=Year, y=SockAnnualEst.num, shape=`Timing capured?`))+
-  geom_line(aes(x=Year, y=SockAnnualEst.num))+
-  scale_x_continuous(breaks= seq(2010,2022,1))+
-  scale_y_continuous(limits = c(0,27000), breaks = seq(0,27000,5000))+
-  theme(legend.position = "bottom")
-plot.old.calc.BabS4
+# Mid-timed redos: 
+MorTahlo.201022 <- bab.sils %>% 
+  dplyr::filter(StreamId %in% c(474,486)) %>% #babine river s4+s3
+  dplyr::select(StreamId, StreamName, Inspection.Year,SilDate,Observer,
+                Affiliation,TargetSockeye,PrimaryInspMode,Sock_AL_HoldOutside,
+                Sock_AL_Hold,Sock_AL_Spawning,Sock_AL_ObsTotal,
+                Sock_AL_EstTotal,Sock_AL_New,Sock_AL_EstReliability,
+                Sock_AL_FishCountability,Sock_AD_Obs,Sock_AD_Est,
+                Sock_AD_.PreSpawnMort,obs.eff,surveyed.full.extent,
+                proportion.surveyed,barriers.present, UseForPeakCount, UseForAUC) %>% 
+  mutate(julian = yday(SilDate), 
+         obs.eff = ifelse(!is.na(obs.eff),obs.eff,1),
+         expanded = Sock_AL_Spawning/obs.eff,
+         UseForAUC = as.logical(UseForAUC),
+         UseForPeakCount = as.logical(UseForPeakCount)) %>% 
+  filter(TargetSockeye %in% T)
 
 
+#recalc auc
+MorTahloaucs.14 <- MorTahlo.201022 %>% 
+  dplyr::filter(UseForAUC %in% T) %>% 
+  dplyr::group_by(Inspection.Year, StreamName) %>% 
+  dplyr::summarize(test.auc.allinone(day = julian, count= expanded, 
+                                     res.time=14)) %>% 
+  filter(auc >0)
 
-plot(arrangeGrob(plot.new.calc.BabS4,plot.old.calc.BabS4))
+ggplot(MorTahloaucs.14)+
+  geom_line(aes(x=Inspection.Year, y=auc, col=StreamName))
+
+MorTahloaucs.14merge <- MorTahloaucs.14 %>%
+  mutate(lgSK = auc, SUBAREA = "BABINE") %>% 
+  select(-auc, year = Inspection.Year, STREAM.NAME = StreamName) %>% 
+  mutate(STREAM.NAME = ifelse(STREAM.NAME %in% "TAHLO CREEK - (LOWER)", "TAHLO CREEK",STREAM.NAME))
+
+
+#From older file:
+
+
+Pdrive <- read_excel("./babineSK/4esc_28March2023-copy.xls", sheet = "SELECT CHART - SX",
+                     range = "A5:BW105", .name_repair = "universal")
+
+colnames(Pdrive)[5:84] <- substr(colnames(Pdrive)[5:84],4,7)
+
+BabS34aucs.14merge <- BabS34aucs.14 %>% 
+  mutate(lgSK = auc, SUBAREA = "BABINE") %>% 
+  select(-auc, year = Inspection.Year, STREAM.NAME = StreamName)
+
+Pdrive.bab <- Pdrive %>% 
+  select(-c(STAT.AREA, SPECIES)) %>% 
+  filter(SUBAREA %in% "BABINE",
+         STREAM.NAME %in% c("BABINE RIVER (SECTIONS 1 - 3)","BABINE RIVER (SECTION 4)",
+                            "MORRISON CREEK", "TAHLO CREEK", "PIERRE CREEK", 
+                            "FOUR-MILE CREEK")) %>% 
+  pivot_longer(-c(SUBAREA, STREAM.NAME),
+               names_to = "year",
+               values_to = "lgSK") %>% 
+  filter(year < 2010) %>% 
+  rbind(BabS34aucs.14merge) %>% 
+  rbind(MorTahloaucs.14merge) %>% 
+  mutate(stock = ifelse(STREAM.NAME %in% c("PIERRE CREEK", "FOUR-MILE CREEK"),
+                        "Babine-early",ifelse(STREAM.NAME %in% c("MORRISON CREEK", "TAHLO CREEK"), 
+                                              "Babine-mid", "Babine-late")),
+         year = as.numeric(year), lgSK = as.numeric(lgSK))  
+  
+options(scipen=999)
+
+ggplot(Pdrive.bab[Pdrive.bab$stock %in% "Babine-late",])+
+  geom_line(aes(x=year, y=lgSK, col=STREAM.NAME))+
+  geom_smooth(aes(x=year, y=lgSK, col=STREAM.NAME), method = "loess", se=F) +
+  labs(x="year",y="Annual Sockeye Estimate", col="")+
+  scale_x_continuous(breaks = seq(min(Pdrive.bab$year),max(Pdrive.bab$year),5))+
+  scale_y_continuous(labels = scales::comma)+
+  theme_babine4()+
+  theme(plot.title = element_text(hjust = 0.5)) +
+  theme(axis.text=element_text(size=16, hjust=1, angle=45),
+        axis.title=element_text(size=16,face="bold"),
+        legend.text = element_text(size=16, face="bold"))
+
+ggplot(Pdrive.bab[Pdrive.bab$stock %in% "Babine-mid",])+
+  geom_line(aes(x=year, y=lgSK, col=STREAM.NAME))+
+  geom_smooth(aes(x=year, y=lgSK, col=STREAM.NAME), se=F)+
+  labs(x="year",y="Annual Sockeye Estimate", col="")+
+  scale_x_continuous(breaks = seq(min(Pdrive.bab$year),max(Pdrive.bab$year),5))+
+  scale_y_continuous(labels = scales::comma)+
+  theme_babine4()+
+  theme(plot.title = element_text(hjust = 0.5)) +
+  theme(axis.text=element_text(size=16, hjust=1, angle=45),
+        axis.title=element_text(size=16,face="bold"),
+        legend.text = element_text(size=16, face="bold"))
+
+ggplot(Pdrive.bab[Pdrive.bab$stock %in% "Babine-early",])+
+  geom_line(aes(x=year, y=lgSK, col=STREAM.NAME))+
+  geom_smooth(aes(x=year, y=lgSK, col=STREAM.NAME), se=F)+
+  labs(x="year",y="Annual Sockeye Estimate", col="")+
+  scale_x_continuous(breaks = seq(min(Pdrive.bab$year),max(Pdrive.bab$year),5))+
+  scale_y_continuous(labels = scales::comma)+
+  theme_babine4()+
+  theme(plot.title = element_text(hjust = 0.5)) +
+  theme(axis.text=element_text(size=16, hjust=1, angle=45),
+        axis.title=element_text(size=16,face="bold"),
+        legend.text = element_text(size=16, face="bold"))
+
 
 
 # Nanika SK redo:
