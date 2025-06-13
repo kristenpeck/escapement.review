@@ -48,31 +48,47 @@ theme_babine4 <- function(base_size = 14) {
     )
 }
 
+# Fetch old versions (see convert_old_dbs.R)
+
+SILs.raw12 <- tibble(read_csv("./old_dbs/StreamInspection2012.csv"), .name_repair = "universal")
+SENs.raw12 <- tibble(read_csv("./old_dbs/tblSEN2012.csv"), .name_repair = "universal")
+
+SILs.raw13 <- tibble(read_csv("./old_dbs/StreamInspection2013.csv"), .name_repair = "universal")
+SENs.raw13 <- tibble(read_csv("./old_dbs/tblSEN2013.csv"), .name_repair = "universal")
 
 
-#Kristen's copy of NCSTAD data:
-SILs.raw23 <- read_excel("MasterStreamInspection2023.xlsx",
+# Fetch Kristen's copy of NCSTAD data for 2023 :
+SILs.raw23NCSTAD <- read_excel("MasterStreamInspection2023.xlsx",
                          .name_repair = "universal")
 
-SENs.raw23 <- read_excel("MastertblSEN2023.xlsx",
+SENs.raw23NCSTAD <- read_excel("MastertblSEN2023.xlsx",
                          .name_repair = "universal")
 
+# Fetch DFO's copy of LBN data for 2023:
+SILs.raw23LBN <- read_excel("MasterStreamInspection2023_LBN.xlsx",
+                               .name_repair = "universal")
+
+SENs.raw23LBN <- read_excel("MastertblSEN2023_LBN.xlsx",
+                               .name_repair = "universal")
+
+
+# Fetch DFO's copy of 2024 data:
 SILs.raw24 <- read_excel("MasterStreamInspection2024.xlsx",
-                         .name_repair = "universal")
-#note, no SENs entered yet for 2024
+                               .name_repair = "universal")
 
+SENs.raw24 <- read_excel("MastertblSEN2024.xlsx",
+                               .name_repair = "universal")
 
-# from stock drive:
+# Fetch compiled database from stock drive:
 SILs.raw <- read_excel("MasterStreamInspection2004-2022.xlsx",
                        .name_repair = "universal") %>% 
-  rbind(SILs.raw23,SILs.raw24)
+  rbind(SILs.raw12,SILs.raw13,SILs.raw23NCSTAD,SILs.raw23LBN,SILs.raw24)
 
 SENs.raw <- read_excel("MastertblSEN2004-2022.xlsx",
                        .name_repair = "universal") %>% 
-  rbind(SENs.raw23)
+  rbind(SENs.raw12,SENs.raw13,SENs.raw23NCSTAD,SENs.raw23LBN,SENs.raw24)
 
 streams <- read_excel("Streams.xlsx")
-
 
 
 
@@ -82,10 +98,10 @@ streams <- read_excel("Streams.xlsx")
 
 #### Watershed review selection - CHANGE THESE TO MATCH YOUR REVIEW ####
 
-review.subject <- "babineSK2019"
+review.subject <- "babineSK2010-24" #text to add to file names
 
 # filter for years of interest:
-years.filter <- c(2019) #those years after the last large babine review
+years.filter <- c(2010:2024) #those years after the last large babine review
 
 
 # filter for streams of interest using grouping identifiers
@@ -104,54 +120,54 @@ exp.streams <- review.streams %>%
 #write_csv(exp.streams, paste0("Streams.toreview-",review.subject,".csv"))
 #after happy with this export, re-save as excel and colour new columns to be filled in
 
-# # Nanika SK and CH
-# 
-# review.subject <- "nanikaSKCH2004-2024"
+# Nanika SK and CH
+
+# review.subject <- "nanikaSKCH2012-2013"
 # 
 # # filter for years of interest:
-# years.filter <- c(2004:2024) 
+# years.filter <- c(2012:2013)
 # unique(years.filter)
 # 
-# # filter for streams of interest using grouping identifiers 
+# # filter for streams of interest using grouping identifiers
 # 
 # str(streams)
-# 
-# 
+
+
 # #nanika river only
-#  review.streams <- streams %>% 
-#    filter(StreamId %in% c(428)) %>% 
+#  review.streams <- streams %>%
+#    filter(StreamId %in% c(428)) %>%
 #    select(StreamId, StreamName,WATERSHED_Code, Active)
 # 
 # 
-# exp.streams <- review.streams %>% 
+# exp.streams <- review.streams %>%
 #   mutate(QA.SegmentStartLatDD = "",QA.SegmentStartLongDD="",
 #          QA.SegmentStopLatDD = "", QA.SegmentStopLongDD="",
 #          QA.SegmentComments = "")
-# 
-# #write_csv(exp.streams, paste0("Streams.toreview-",review.subject,".csv"))
+
+#write_csv(exp.streams, paste0("Streams.toreview-",review.subject,".csv"))
 
 
 # # Morice and Nanika version:
-# 
-# review.subject <- "morice-nanikaCH2004-2022"
+
+# review.subject <- "morice2023-24"
 # 
 # # filter for years of interest:
-# years.filter <- c(2004:2022) #all available recent yrs
+# years.filter <- c(2023:2024) #all available recent yrs
 # unique(years.filter)
-# 
-# # filter for streams of interest using grouping identifiers 
-# 
-# #wedzinkwa watershed, 460
-# review.streams <- streams %>% 
-#   mutate(wscd.short = substr(WATERSHED_Code,1,3)) %>% 
-#   filter(wscd.short %in% "460") %>% # select those streams and lakes within the Morice watershed (460)
-#   select(StreamId, StreamName,WATERSHED_Code, Active)
-# 
-# # review.streams <- streams %>% 
-# #   filter(StreamId %in% c(427, 428)) %>% # select those streams and lakes within the Morice watershed (460)
+
+# # # filter for streams of interest using grouping identifiers
+# # 
+# # #wedzinkwa watershed, 460
+# # review.streams <- streams %>%
+# #   mutate(wscd.short = substr(WATERSHED_Code,1,3)) %>%
+# #   filter(wscd.short %in% "460") %>% # select those streams and lakes within the Morice watershed (460)
 # #   select(StreamId, StreamName,WATERSHED_Code, Active)
-# 
-# exp.streams <- review.streams %>% 
+# # 
+# review.streams <- streams %>%
+#   filter(StreamId %in% c(427, 428)) %>% # select those streams and lakes within the Morice watershed (460)
+#   select(StreamId, StreamName,WATERSHED_Code, Active)
+
+# exp.streams <- review.streams %>%
 #   mutate(QA.SegmentStartLatDD = "",QA.SegmentStartLongDD="",
 #          QA.SegmentStopLatDD = "", QA.SegmentStopLongDD="",
 #          QA.SegmentComments = "")
@@ -174,9 +190,10 @@ SILs.to.review <- review.streams %>%
   mutate(julian.day = yday(SilDate),obs.eff = as.numeric(""), QA.comments = "", surveyed.full.extent = "",
          proportion.surveyed=as.numeric(""), barriers.present = "",
          UseForPeakCount = NA,
-         UseForAUC = NA)
+         UseForAUC = NA, 
+         SilDate = as_date(SilDate))
 
-write_csv(SILs.to.review, paste0("SILs.toreview-",review.subject,".csv"))
+#write_csv(SILs.to.review, paste0("SILs.toreview-",review.subject,".csv"), na = "")
 #after happy with this export, re-save as excel and colour new columns to be filled in
 
 
@@ -220,7 +237,7 @@ SENs.review <- review.streams %>%
          QA.SockEntStreamEst)
 
 
-write_csv(SENs.review, paste0("AUC.res.time.review-",review.subject,".csv"), na = "")
+#write_csv(SENs.review, paste0("AUC.res.time.review-",review.subject,".csv"), na = "")
 #after happy with this export, re-save as excel and colour new columns to be filled in
 
 
@@ -230,14 +247,14 @@ write_csv(SENs.review, paste0("AUC.res.time.review-",review.subject,".csv"), na 
 
 # filter SILs by above selections 
 # 
-# SILs.to.review <- review.streams %>% 
-#   left_join(SILs.raw, by=c("StreamId"="StreamID")) %>% 
-#   filter(Inspection.Year %in% years.filter,
-#          TargetChin %in% T) %>%  #only include SILs where CH were targeted
+# SILs.to.review <- review.streams %>%
+#   left_join(SILs.raw, by=c("StreamId"="StreamID")) %>%
+#   filter(Inspection.Year %in% years.filter) %>% 
+#          #TargetChin %in% T) %>%  #only include SILs where CH were targeted
 #   mutate(julian.day = yday(SilDate),obs.eff = as.numeric(""), QA.comments = "", surveyed.full.extent = "",
 #          proportion.surveyed=as.numeric(""), barriers.present = "")
 # 
-# #write_csv(SILs.to.review, paste0("SILs.toreview-",review.subject,".csv"))
+# write_csv(SILs.to.review, paste0("SILs.toreview-",review.subject,".csv"))
 # #after happy with this export, re-save as excel and colour new columns to be filled in
 # 
 # 
@@ -291,6 +308,7 @@ write_csv(SENs.review, paste0("AUC.res.time.review-",review.subject,".csv"), na 
 #make overview table of SILs present by stream and year
 
 sil.summary.by.yr <- SILs.to.review %>% 
+  #filter(TargetSockeye %in% T) %>% #uncomment if looking for target of SK
   group_by(Inspection.Year, StreamName) %>% 
   summarise(sil = length(unique(StreamName))) %>% 
   mutate(silx = ifelse(sil %in% 1,"X",NA)) %>% 
@@ -298,9 +316,10 @@ sil.summary.by.yr <- SILs.to.review %>%
   arrange(Inspection.Year) %>% 
   pivot_wider(names_from = Inspection.Year,
               values_from = silx) %>% 
-  arrange(StreamName)
+  arrange(StreamName) 
+  
 
-write_csv(sil.summary.by.yr,paste0("SIL.presencebyyr-",review.subject,".csv")) 
+#write_csv(sil.summary.by.yr,paste0("SIL.presencebyyr-",review.subject,".csv"), na = "") 
 
 
 #make table of SENs present by stream and year
@@ -314,7 +333,7 @@ sen.summary.by.yr <- SENs.review %>%
               values_from = senx) %>% 
   arrange(StreamName)
 
-write_csv(sen.summary.by.yr,paste0("SEN.presencebyyr-",review.subject,".csv"))
+#write_csv(sen.summary.by.yr,paste0("SEN.presencebyyr-",review.subject,".csv"), na="")
 
 
 #### Timing of peak spawn versus all targeted surveys ####
@@ -548,19 +567,20 @@ test.auc.allinone <- function (day, count, res.time){
 }
 
 #example:
-test.auc.allinone(day = c(10,20,30), count = c(100, 200, 50), 
-                  res.time=15)
+test.auc.allinone(day = c(254,263,270), count = c(0/.7, 13300/.7, 35000/.7), 
+                  res.time=21)
 
 
 # import and re-calculate the AUC for AUC estimates.
 #make these into a function so it can be re-done repeatedly
+#note that this should be the same file as exported earlier 
 
 
 
-bab.sils <- read_excel("./babineSK/SILs.babine.SK_11-Mar-2025export.xlsx", 
+bab.sils <- read_excel("./babineSK/SILs.babine.SK_12-Jun-2025export.xlsx", 
                        sheet="SILs.babine.SK", na = "NA")
 
-BabS34.201022 <- bab.sils %>% 
+BabS34 <- bab.sils %>% 
   dplyr::filter(StreamId %in% c(463,464)) %>% #babine river s4+s3
   dplyr::select(StreamId, StreamName, Inspection.Year,SilDate,Observer,
          Affiliation,TargetSockeye,PrimaryInspMode,Sock_AL_HoldOutside,
@@ -574,16 +594,20 @@ BabS34.201022 <- bab.sils %>%
          expanded = Sock_AL_Spawning/obs.eff,
          UseForAUC = as.logical(UseForAUC),
          UseForPeakCount = as.logical(UseForPeakCount)) %>% 
-  filter(TargetSockeye %in% T)
+  filter(julian >196 )#%>% # filter dates for after mid-july
+  #filter(TargetSockeye %in% T)
 
-ggplot(BabS34.201022[BabS34.201022$Inspection.Year %in% 2011,])+
+ggplot(BabS34)+
   geom_point(aes(x=julian,y=expanded, col=as.factor(StreamName)))+
   geom_line(aes(x=julian,y=expanded,col=as.factor(StreamName)))+
-  labs(x="Julian day", y="# spawners (expanded by obs. eff)", col="Babine R S4")+
+  geom_point(data = BabS34[BabS34$UseForAUC %in% T,], aes(x=julian, y=expanded),
+             shape = "star")+
+  labs(x="Julian day", y="# spawners (expanded by obs. eff)", col="Stream ")+
   theme_babine4()+
   theme(plot.title = element_text(hjust = 0.5)) +
   theme(axis.text=element_text(size=12, hjust=1, angle=45),
-        axis.title=element_text(size=14,face="bold"))
+        axis.title=element_text(size=14,face="bold"))+
+  facet_wrap(~Inspection.Year)
 
 #recalc auc
 BabS34aucs.14 <- BabS34.201022 %>% 
