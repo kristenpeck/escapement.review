@@ -50,6 +50,7 @@ rsconnect/
 
 #Data files
 *.xlsx
+*.xls
 *.csv
 *.kml
 *.png
